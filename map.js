@@ -84,6 +84,14 @@ function minutesSinceMidnight(date) {
   return date.getHours() * 60 + date.getMinutes();
 }
 
+// Sort each station's share of departures into 3 groups: more arrivals, balanced, more departures
+let stationFlow = d3.scaleQuantize().domain([0, 1]).range([0, 0.5, 1]);
+
+// Stations with no trips get 0.5 (balanced) instead of 0 / 0, which has no color
+function getDepartureRatio(station) {
+  return station.totalTraffic ? stationFlow(station.departures / station.totalTraffic) : 0.5;
+}
+
 // Shared style for the Boston and Cambridge bike lanes
 const bikeLaneStyle = {
   'line-color': 'green',
@@ -163,6 +171,7 @@ map.on('load', async () => {
     .enter()
     .append('circle')
     .attr('r', (d) => radiusScale(d.totalTraffic))
+    .style('--departure-ratio', (d) => getDepartureRatio(d))
     .each(function (d) {
       // Add <title> for browser tooltips
       d3.select(this)
@@ -213,7 +222,8 @@ map.on('load', async () => {
     circles
       .data(filteredStations, (d) => d.short_name)
       .join('circle')
-      .attr('r', (d) => radiusScale(d.totalTraffic));
+      .attr('r', (d) => radiusScale(d.totalTraffic))
+      .style('--departure-ratio', (d) => getDepartureRatio(d));
   }
 
   timeSlider.addEventListener('input', updateTimeDisplay);
