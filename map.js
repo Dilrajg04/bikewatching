@@ -1,5 +1,6 @@
 // Import Mapbox as an ESM module
 import mapboxgl from 'https://cdn.jsdelivr.net/npm/mapbox-gl@2.15.0/+esm';
+import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm';
 
 // Check that Mapbox GL JS is loaded
 console.log('Mapbox GL JS Loaded:', mapboxgl);
@@ -15,6 +16,16 @@ const map = new mapboxgl.Map({
   minZoom: 5, // Minimum allowed zoom
   maxZoom: 18, // Maximum allowed zoom
 });
+
+// Select the svg inside the map container for the station markers
+const svg = d3.select('#map').select('svg');
+
+// Convert a station's longitude and latitude to pixel coordinates on the map
+function getCoords(station) {
+  const point = new mapboxgl.LngLat(+station.lon, +station.lat);
+  const { x, y } = map.project(point);
+  return { cx: x, cy: y };
+}
 
 // Shared style for the Boston and Cambridge bike lanes
 const bikeLaneStyle = {
@@ -47,4 +58,46 @@ map.on('load', async () => {
     source: 'cambridge_route',
     paint: bikeLaneStyle,
   });
+
+  let jsonData;
+
+  try {
+    const jsonurl = 'https://dsc106.com/labs/lab07/data/bluebikes-stations.json';
+
+    // Await JSON fetch
+    jsonData = await d3.json(jsonurl);
+
+    console.log('Loaded JSON Data:', jsonData);
+  } catch (error) {
+    console.error('Error loading JSON:', error);
+  }
+
+  let stations = jsonData.data.stations;
+  console.log('Stations Array:', stations);
+
+  // Append a circle to the svg for each station
+  const circles = svg
+    .selectAll('circle')
+    .data(stations)
+    .enter()
+    .append('circle')
+    .attr('r', 5)
+    .attr('fill', 'steelblue')
+    .attr('stroke', 'white')
+    .attr('stroke-width', 1)
+    .attr('opacity', 0.8);
+
+  // Move the circles to match the map when it moves or zooms
+  function updatePositions() {
+    circles
+      .attr('cx', (d) => getCoords(d).cx)
+      .attr('cy', (d) => getCoords(d).cy);
+  }
+
+  updatePositions();
+
+  map.on('move', updatePositions);
+  map.on('zoom', updatePositions);
+  map.on('resize', updatePositions);
+  map.on('moveend', updatePositions);
 });
