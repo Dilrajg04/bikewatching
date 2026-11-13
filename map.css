@@ -28,4 +28,5 @@ body {
   fill-opacity: 60%;
   stroke: white;
   stroke-width: 1;
+  pointer-events: auto;
 }

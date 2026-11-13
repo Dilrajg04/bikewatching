@@ -110,7 +110,15 @@ map.on('load', async () => {
     .data(stations)
     .enter()
     .append('circle')
-    .attr('r', (d) => radiusScale(d.totalTraffic));
+    .attr('r', (d) => radiusScale(d.totalTraffic))
+    .each(function (d) {
+      // Add <title> for browser tooltips
+      d3.select(this)
+        .append('title')
+        .text(
+          `${d.totalTraffic} trips (${d.departures} departures, ${d.arrivals} arrivals)`,
+        );
+    });
 
   // Move the circles to match the map when it moves or zooms
   function updatePositions() {
