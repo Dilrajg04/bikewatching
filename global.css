@@ -8,3 +8,24 @@ body {
   margin: auto;
   padding: 1em;
 }
+
+header {
+  display: flex;
+  gap: 1em;
+  align-items: baseline;
+  width: 100%;
+}
+
+header label {
+  margin-left: auto;
+}
+
+header time,
+header em {
+  display: block;
+}
+
+header em {
+  color: gray;
+  font-style: italic;
+}

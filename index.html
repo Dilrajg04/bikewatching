@@ -12,7 +12,15 @@
 </head>
 
 <body>
-    <h1>🚴🏼‍♀️ Bikewatching</h1>
+    <header>
+        <h1>🚴🏼‍♀️ Bikewatching</h1>
+        <label>
+            Filter by time:
+            <input id="time-slider" type="range" min="-1" max="1440" value="-1">
+            <time id="selected-time"></time>
+            <em id="any-time">(any time)</em>
+        </label>
+    </header>
     <p>An interactive map of Bluebikes traffic across Boston and Cambridge in March 2024.</p>
     <div id="map">
         <svg></svg>
