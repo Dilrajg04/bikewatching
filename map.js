@@ -16,6 +16,13 @@ const map = new mapboxgl.Map({
   maxZoom: 18, // Maximum allowed zoom
 });
 
+// Shared style for the Boston and Cambridge bike lanes
+const bikeLaneStyle = {
+  'line-color': 'green',
+  'line-width': 3,
+  'line-opacity': 0.4,
+};
+
 map.on('load', async () => {
   map.addSource('boston_route', {
     type: 'geojson',
@@ -26,10 +33,18 @@ map.on('load', async () => {
     id: 'bike-lanes',
     type: 'line',
     source: 'boston_route',
-    paint: {
-      'line-color': 'green',
-      'line-width': 3,
-      'line-opacity': 0.4,
-    },
+    paint: bikeLaneStyle,
+  });
+
+  map.addSource('cambridge_route', {
+    type: 'geojson',
+    data: 'https://raw.githubusercontent.com/cambridgegis/cambridgegis_data/main/Recreation/Bike_Facilities/RECREATION_BikeFacilities.geojson',
+  });
+
+  map.addLayer({
+    id: 'cambridge-bike-lanes',
+    type: 'line',
+    source: 'cambridge_route',
+    paint: bikeLaneStyle,
   });
 });
