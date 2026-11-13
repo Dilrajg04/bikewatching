@@ -33,16 +33,40 @@ function formatTime(minutes) {
   return date.toLocaleString('en-US', { timeStyle: 'short' });
 }
 
-// Count arrivals, departures, and total traffic at each station for the given trips
-function computeStationTraffic(stations, trips) {
+// One bucket of trips for each minute of the day (24 * 60 = 1440)
+let departuresByMinute = Array.from({ length: 1440 }, () => []);
+let arrivalsByMinute = Array.from({ length: 1440 }, () => []);
+
+// Get the trips within 60 minutes of the selected minute from the buckets
+function filterByMinute(tripsByMinute, minute) {
+  if (minute === -1) {
+    return tripsByMinute.flat(); // No filtering, return all trips
+  }
+
+  // Normalize both min and max minutes to the valid range [0, 1439]
+  let minMinute = (minute - 60 + 1440) % 1440;
+  let maxMinute = (minute + 60) % 1440;
+
+  // Handle time filtering across midnight
+  if (minMinute > maxMinute) {
+    let beforeMidnight = tripsByMinute.slice(minMinute);
+    let afterMidnight = tripsByMinute.slice(0, maxMinute);
+    return beforeMidnight.concat(afterMidnight).flat();
+  } else {
+    return tripsByMinute.slice(minMinute, maxMinute).flat();
+  }
+}
+
+// Count arrivals, departures, and total traffic at each station for the selected time
+function computeStationTraffic(stations, timeFilter = -1) {
   const departures = d3.rollup(
-    trips,
+    filterByMinute(departuresByMinute, timeFilter),
     (v) => v.length,
     (d) => d.start_station_id,
   );
 
   const arrivals = d3.rollup(
-    trips,
+    filterByMinute(arrivalsByMinute, timeFilter),
     (v) => v.length,
     (d) => d.end_station_id,
   );
@@ -58,21 +82,6 @@ function computeStationTraffic(stations, trips) {
 
 function minutesSinceMidnight(date) {
   return date.getHours() * 60 + date.getMinutes();
-}
-
-// Keep trips that started or ended within 60 minutes of the selected time
-function filterTripsbyTime(trips, timeFilter) {
-  return timeFilter === -1
-    ? trips
-    : trips.filter((trip) => {
-        const startedMinutes = minutesSinceMidnight(trip.started_at);
-        const endedMinutes = minutesSinceMidnight(trip.ended_at);
-
-        return (
-          Math.abs(startedMinutes - timeFilter) <= 60 ||
-          Math.abs(endedMinutes - timeFilter) <= 60
-        );
-      });
 }
 
 // Shared style for the Boston and Cambridge bike lanes
@@ -126,11 +135,19 @@ map.on('load', async () => {
     (trip) => {
       trip.started_at = new Date(trip.started_at);
       trip.ended_at = new Date(trip.ended_at);
+
+      // Put each trip in the bucket for the minute it started and the minute it ended
+      let startedMinutes = minutesSinceMidnight(trip.started_at);
+      departuresByMinute[startedMinutes].push(trip);
+
+      let endedMinutes = minutesSinceMidnight(trip.ended_at);
+      arrivalsByMinute[endedMinutes].push(trip);
+
       return trip;
     },
   );
 
-  const stations = computeStationTraffic(jsonData.data.stations, trips);
+  const stations = computeStationTraffic(jsonData.data.stations);
   console.log('Stations Array:', stations);
 
   // Square root scale so circle area matches traffic
@@ -188,8 +205,7 @@ map.on('load', async () => {
   }
 
   function updateScatterPlot(timeFilter) {
-    const filteredTrips = filterTripsbyTime(trips, timeFilter);
-    const filteredStations = computeStationTraffic(stations, filteredTrips);
+    const filteredStations = computeStationTraffic(stations, timeFilter);
 
     // Use bigger circles when filtering so stations with fewer trips stay visible
     timeFilter === -1 ? radiusScale.range([0, 25]) : radiusScale.range([3, 50]);
